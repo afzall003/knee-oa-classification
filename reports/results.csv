@@ -1,2 +1,3 @@
 timestamp,run,split,balanced_accuracy,accuracy,qwk,macro_f1,recall_g0,recall_g1,recall_g2,recall_g3,recall_g4,config
 2026-10-03T11:27:42,baseline_always_0,val,0.2,0.3971,0.0,0.1137,1.0,0.0,0.0,0.0,0.0,"{""type"": ""constant"", ""prediction"": 0}"
+2026-10-03T11:55:57,baseline_cnn_v1,val,0.591,0.5036,0.5563,0.5273,0.375,0.0784,0.8396,0.7358,0.9259,"{""model"": ""baseline_cnn"", ""filters"": [32, 64, 128, 256], ""dropout"": 0.3, ""optimizer"": ""adam"", ""lr"": 0.001, ""batch_size"": 32, ""max_epochs"": 60, ""class_weights"": null, ""augmentation"": null, ""seed"": 42, ""best_epoch"": 25, ""epochs_run"": 37}"
