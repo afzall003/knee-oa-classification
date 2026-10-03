@@ -1,0 +1,2 @@
+timestamp,run,split,balanced_accuracy,accuracy,qwk,macro_f1,recall_g0,recall_g1,recall_g2,recall_g3,recall_g4,config
+2026-10-03T11:27:42,baseline_always_0,val,0.2,0.3971,0.0,0.1137,1.0,0.0,0.0,0.0,0.0,"{""type"": ""constant"", ""prediction"": 0}"
