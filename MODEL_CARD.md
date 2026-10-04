@@ -18,7 +18,7 @@ Two custom convolutional neural networks, designed and **trained from scratch** 
 
 > **Not a medical device.** Research and portfolio project only. Not clinically validated; must not be used for diagnosis or treatment decisions.
 
-- **Code, notebooks and full write-up:** _[link to the GitHub repository]_
+- **Code, notebooks and full write-up:** https://github.com/afzall003/knee-oa-classification
 - **Live demo:** https://huggingface.co/spaces/afzal2003/kneegrade
 
 ## Results on the held-out test set (1,656 X-rays)
