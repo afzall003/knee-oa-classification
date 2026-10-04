@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KneeGrade parity check</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  body { font: 15px/1.6 "IBM Plex Sans", system-ui, sans-serif; color: #142231; background: #EEF2F4; margin: 0; padding: 40px; }
+  main { max-width: 760px; margin: 0 auto; background: #fff; border: 1px solid #DAE1E7; border-radius: 14px; padding: 28px; }
+  h1 { font-size: 22px; margin: 0 0 6px; } p { color: #586777; margin: 0 0 18px; }
+  button { height: 42px; padding: 0 18px; border-radius: 9px; border: 0; background: #0B6E66; color: #fff; font: 600 15px inherit; cursor: pointer; }
+  button:disabled { background: #9DBDB9; }
+  .bar { height: 10px; border-radius: 5px; background: #EDF1F4; margin: 18px 0 6px; overflow: hidden; }
+  .bar span { display: block; height: 100%; width: 0; background: #0B6E66; }
+  table { width: 100%; border-collapse: collapse; margin-top: 18px; }
+  td { padding: 9px 4px; border-bottom: 1px solid #DAE1E7; } td:last-child { text-align: right; font-weight: 600; }
+  .pass { color: #0B6E66; } .fail { color: #B42318; }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js" defer></script>
+<script src="js/preprocess.js" defer></script>
+<script src="js/model.js" defer></script>
+</head>
+<body>
+<main>
+  <h1>Browser vs Python parity check</h1>
+  <p>Runs the in-browser pipeline on every validation X-ray and compares it with the Python pipeline's saved outputs. This page is for verification only and isn't part of the published site.</p>
+  <button id="run">Run check</button>
+  <div class="bar"><span id="bar"></span></div>
+  <div id="status">Ready.</div>
+  <table id="results" hidden></table>
+</main>
+<script>
+const fnv = (u8) => { let h = 0x811c9dc5; for (const b of u8) { h ^= b; h = Math.imul(h, 0x01000193) >>> 0; } return h >>> 0; };
+const balAcc = (y, p) => { let s = 0; for (let g = 0; g < 5; g++) { const idx = y.map((v, i) => v === g ? i : -1).filter((i) => i >= 0); s += idx.filter((i) => p[i] === g).length / idx.length; } return s / 5; };
+document.getElementById("run").addEventListener("click", async (e) => {
+  e.target.disabled = true;
+  const status = document.getElementById("status"), bar = document.getElementById("bar");
+  status.textContent = "Loading models...";
+  const cfg = await (await fetch("models/pipeline.json")).json();
+  await tf.ready();
+  const members = await Promise.all(cfg.members.map((s) => KneeModel.loadMember(tf, "models/", s)));
+  const items = await (await fetch("parity/expected.json")).json();
+  const total = cfg.train_counts.reduce((a, b) => a + b, 0), prior = cfg.train_counts.map((c) => c / total);
+  const argmaxAdj = (p) => { const a = p.map((v, k) => v / prior[k]); return a.indexOf(Math.max(...a)); };
+  let same = 0, maxDiff = 0, agree = 0; const labels = [], jsPred = [], pyPred = [];
+  const t0 = performance.now();
+  for (let i = 0; i < items.length; i++) {
+    const it = items[i];
+    const raw = await KneePreprocess.decodeToGray224(await (await fetch("parity/" + it.path)).blob());
+    const px = KneePreprocess.preprocess(raw);
+    if (fnv(px) === it.hash) same++;
+    const r = KneeModel.analyze(tf, members, cfg, px, false);
+    r.probabilities.forEach((p, k) => { maxDiff = Math.max(maxDiff, Math.abs(p - it.probs[k])); });
+    const py = argmaxAdj(it.probs);
+    labels.push(it.label); jsPred.push(r.grade); pyPred.push(py); if (r.grade === py) agree++;
+    if (i % 10 === 0 || i === items.length - 1) {
+      bar.style.width = `${((i + 1) / items.length) * 100}%`;
+      status.textContent = `Checked ${i + 1} of ${items.length} X-rays`;
+      await new Promise((res) => setTimeout(res, 0));
+    }
+  }
+  const n = items.length, jsBal = balAcc(labels, jsPred), pyBal = balAcc(labels, pyPred);
+  const row = (label, value, ok) => `<tr><td>${label}</td><td class="${ok ? "pass" : "fail"}">${value}</td></tr>`;
+  const table = document.getElementById("results");
+  table.innerHTML =
+    row("Preprocessed images identical to Python", `${same} of ${n}`, same === n) +
+    row("Largest probability difference", maxDiff.toExponential(2), maxDiff < 1e-3) +
+    row("Predicted grade agrees with Python", `${agree} of ${n}`, agree === n) +
+    row("Balanced accuracy in the browser", jsBal.toFixed(4), Math.abs(jsBal - pyBal) < 1e-9) +
+    row("Balanced accuracy in Python", pyBal.toFixed(4), true) +
+    row("Time", `${((performance.now() - t0) / 1000).toFixed(1)} s on backend ${tf.getBackend()}`, true);
+  table.hidden = false;
+  status.textContent = same === n && agree === n ? "Parity confirmed: the browser reproduces the Python pipeline." : "Differences found, see the table.";
+});
+</script>
+</body>
+</html>

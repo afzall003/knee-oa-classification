@@ -1,0 +1,316 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KneeGrade: knee osteoarthritis grading</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" defer></script>
+<script src="js/preprocess.js" defer></script>
+<script src="js/model.js" defer></script>
+<script src="app.js" defer></script>
+</head>
+<body>
+<div class="app" id="app">
+
+  <!-- ============ Sidebar ============ -->
+  <aside class="sidebar" id="sidebar" aria-label="Main navigation">
+    <a class="brand" href="#/dashboard">
+      <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true">
+        <rect x="1" y="1" width="30" height="30" rx="8" fill="currentColor" opacity=".14"/>
+        <path d="M11 6c0 4 1.5 6.5 5 7.5 3.5-1 5-3.5 5-7.5M11 26c0-4 1.5-6.5 5-7.5 3.5 1 5 3.5 5 7.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+        <path d="M10 16h12" stroke="currentColor" stroke-width="1.6" stroke-dasharray="2 2.5"/>
+      </svg>
+      <span class="brand-text"><strong>KneeGrade</strong><span>Knee OA severity grading</span></span>
+    </a>
+
+    <nav class="nav">
+      <a class="nav-item" href="#/dashboard" data-page="dashboard">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="4.5" rx="1.5"/><rect x="13.5" y="11" width="7" height="9.5" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/></svg>
+        <span>Dashboard</span>
+      </a>
+      <a class="nav-item" href="#/analyze" data-page="analyze">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8V5.5A1.5 1.5 0 0 1 5.5 4H8M16 4h2.5A1.5 1.5 0 0 1 20 5.5V8M20 16v2.5a1.5 1.5 0 0 1-1.5 1.5H16M8 20H5.5A1.5 1.5 0 0 1 4 18.5V16M12 8.5v7M8.5 12h7"/></svg>
+        <span>New analysis</span>
+      </a>
+      <a class="nav-item" href="#/history" data-page="history">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.4-5.7M4 4v4h4M12 8v4.5l3 2"/></svg>
+        <span>History</span>
+      </a>
+      <a class="nav-item" href="#/insights" data-page="insights">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h16M7 16v-4M11.5 16V7M16 16v-6.5M20 16V4.5"/></svg>
+        <span>Model insights</span>
+      </a>
+      <a class="nav-item" href="#/about" data-page="about">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 11v5.5M12 7.6v.4"/></svg>
+        <span>About</span>
+      </a>
+    </nav>
+
+    <div class="sidebar-foot">
+      <p class="model-state" id="model-state"><span class="dot"></span><span>Loading the model</span></p>
+      <p class="shortcut"><kbd>Ctrl</kbd> + <kbd>B</kbd> hides this menu</p>
+      <p class="disclaimer-mini">Research demo. Not for diagnosis.</p>
+    </div>
+  </aside>
+  <div class="backdrop" id="backdrop"></div>
+
+  <!-- ============ Main ============ -->
+  <div class="main">
+    <header class="topbar">
+      <button class="icon-btn" id="sidebar-toggle" aria-label="Show or hide the menu (Ctrl+B)" aria-controls="sidebar" aria-expanded="true">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="15" rx="2"/><path d="M9.5 4.5v15"/></svg>
+      </button>
+      <h1 id="page-title">Dashboard</h1>
+      <a class="btn primary topbar-cta" href="#/analyze">New analysis</a>
+    </header>
+
+    <main class="content" id="content" tabindex="-1">
+
+      <!-- ===== Dashboard ===== -->
+      <section class="view" data-view="dashboard" hidden>
+        <div class="hero">
+          <div class="hero-copy">
+            <h2>Grade a knee X-ray in seconds</h2>
+            <p>Two custom neural networks estimate the Kellgren–Lawrence grade, from 0 (healthy) to 4 (severe), and show which parts of the joint drove the result.</p>
+            <p class="hero-fine">Everything runs inside your browser: X-rays never leave your device, and every analysis is saved to this browser's history.</p>
+          </div>
+          <div class="dropzone" data-dropzone tabindex="0" role="button" aria-label="Upload a knee X-ray">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15.5V4.5M7.5 9 12 4.5 16.5 9M4.5 15v3a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2v-3"/></svg>
+            <strong>Drop an X-ray here</strong>
+            <span>or click to choose a PNG or JPG file</span>
+          </div>
+        </div>
+
+        <div class="stats" id="dash-stats"></div>
+
+        <div class="dash-grid">
+          <section class="panel">
+            <div class="panel-head"><h3>Recent analyses</h3><a class="text-link" href="#/history">Open history</a></div>
+            <div id="dash-recent"></div>
+          </section>
+          <section class="panel">
+            <div class="panel-head"><h3>Grades in your history</h3></div>
+            <div id="dash-dist"></div>
+          </section>
+        </div>
+
+        <section class="panel model-strip">
+          <div>
+            <h3>About the model</h3>
+            <p>Tested once on 1,656 held-out X-rays: balanced accuracy <b>0.644</b> (95% CI 0.621 to 0.666) and quadratic weighted kappa <b>0.753</b>. Severe osteoarthritis is recognized in 96% of cases; separating grades 0, 1 and 2 remains the hardest part.</p>
+          </div>
+          <a class="btn" href="#/insights">See model insights</a>
+        </section>
+      </section>
+
+      <!-- ===== New analysis ===== -->
+      <section class="view" data-view="analyze" hidden>
+        <div class="analyze-grid">
+          <section class="panel">
+            <h3>X-ray</h3>
+            <div class="dropzone tall" id="analyze-drop" data-dropzone tabindex="0" role="button" aria-label="Upload a knee X-ray">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15.5V4.5M7.5 9 12 4.5 16.5 9M4.5 15v3a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2v-3"/></svg>
+              <strong>Drop an X-ray here</strong>
+              <span>Front view, cropped to the knee joint. PNG or JPG, up to 10 MB.</span>
+            </div>
+            <div class="preview" id="preview" hidden>
+              <div class="preview-frame"><img id="preview-img" alt="Selected X-ray"></div>
+              <div class="preview-meta">
+                <span id="preview-name" class="truncate"></span>
+                <button class="text-btn" id="change-file" type="button">Choose another</button>
+              </div>
+            </div>
+
+            <label class="check"><input type="checkbox" id="opt-heatmap" checked> Generate a heatmap of where the model looked</label>
+            <button class="btn primary wide" id="analyze-btn" type="button" disabled>Analyze X-ray</button>
+            <p class="error" id="analyze-error" role="alert" hidden></p>
+
+            <ol class="stepper" id="stepper" hidden>
+              <li data-step="read"><span class="step-dot"></span>Read the image</li>
+              <li data-step="grade"><span class="step-dot"></span>Preprocess and grade</li>
+              <li data-step="heatmap"><span class="step-dot"></span>Compute the heatmap</li>
+              <li data-step="save"><span class="step-dot"></span>Save to history</li>
+            </ol>
+
+            <div class="examples">
+              <h4>No X-ray at hand? Try one of these</h4>
+              <div class="example-row" id="examples"></div>
+              <p class="fine">Shown unmodified, with their dataset labels. Source: Chen (2018), Mendeley Data, CC BY 4.0.</p>
+            </div>
+          </section>
+
+          <section class="panel result-panel" id="result" aria-live="polite"></section>
+        </div>
+      </section>
+
+      <!-- ===== History ===== -->
+      <section class="view" data-view="history" hidden>
+        <section class="panel">
+          <div class="filters">
+            <label class="field grow"><span>Search</span><input type="search" id="f-search" placeholder="knee_left_2024.png"></label>
+            <label class="field"><span>Grade</span>
+              <select id="f-grade">
+                <option value="">All grades</option>
+                <option value="0">0 Healthy</option><option value="1">1 Doubtful</option>
+                <option value="2">2 Minimal</option><option value="3">3 Moderate</option><option value="4">4 Severe</option>
+              </select>
+            </label>
+            <label class="field"><span>From</span><input type="date" id="f-from"></label>
+            <label class="field"><span>To</span><input type="date" id="f-to"></label>
+            <label class="field"><span>Sort</span>
+              <select id="f-sort">
+                <option value="new">Newest first</option><option value="old">Oldest first</option>
+                <option value="grade-desc">Highest grade first</option><option value="grade-asc">Lowest grade first</option>
+              </select>
+            </label>
+          </div>
+          <div class="history-bar">
+            <span id="h-count" class="muted"></span>
+            <div class="history-actions">
+              <button class="btn" id="h-export" type="button">Export CSV</button>
+              <button class="btn danger" id="h-clear" type="button">Clear history</button>
+            </div>
+          </div>
+          <div id="h-table"></div>
+        </section>
+      </section>
+
+      <!-- ===== Model insights ===== -->
+      <section class="view" data-view="insights" hidden>
+        <p class="lead">All figures come from a single evaluation on 1,656 held-out test X-rays, run after the pipeline was frozen. Intervals are 95% bootstrap confidence intervals.</p>
+        <div class="metrics" id="ins-metrics"></div>
+
+        <div class="two-col">
+          <section class="panel">
+            <div class="panel-head"><h3>Performance by grade</h3></div>
+            <div id="ins-perclass"></div>
+          </section>
+          <section class="panel">
+            <div class="panel-head"><h3>Confusion matrix</h3><span class="muted small">Rows: true grade. Columns: predicted.</span></div>
+            <div id="ins-cm"></div>
+          </section>
+        </div>
+
+        <section class="panel">
+          <div class="panel-head"><h3>Training curves</h3><span class="muted small">Validation data, both ensemble members</span></div>
+          <div class="charts">
+            <figure><figcaption>Validation balanced accuracy</figcaption><div class="chart-box"><canvas id="ch-balacc"></canvas></div></figure>
+            <figure><figcaption>Loss, augmented baseline</figcaption><div class="chart-box"><canvas id="ch-loss"></canvas></div></figure>
+            <figure><figcaption>Accuracy, augmented baseline</figcaption><div class="chart-box"><canvas id="ch-acc"></canvas></div></figure>
+          </div>
+          <p class="fine" id="ch-note"></p>
+        </section>
+
+        <div class="two-col">
+          <section class="panel">
+            <div class="panel-head"><h3>How the final pipeline was chosen</h3><span class="muted small">Validation set</span></div>
+            <div id="ins-exp"></div>
+          </section>
+          <section class="panel">
+            <div class="panel-head"><h3>Dataset grade distribution</h3></div>
+            <div id="ins-data"></div>
+          </section>
+        </div>
+
+        <section class="panel">
+          <div class="panel-head"><h3>Can the heatmaps be trusted?</h3></div>
+          <div class="checks">
+            <div><b>70%</b><span>of heatmap signal falls on the joint band, which covers 31% of the image</span></div>
+            <div><b>0.15 vs 0.42</b><span>deletion-test area: erasing highlighted regions collapses confidence far faster than erasing random ones</span></div>
+            <div><b>−0.03</b><span>similarity to an untrained network's heatmaps, so the maps reflect what the model learned</span></div>
+          </div>
+          <div class="figure-row">
+            <figure><img src="/assets/gradcam_test_grid.png" alt="Grad-CAM heatmaps on test X-rays for each grade" loading="lazy"><figcaption>Heatmaps on test X-rays: four correct and two incorrect per grade.</figcaption></figure>
+            <figure><img src="/assets/deletion_test.png" alt="Deletion test chart" loading="lazy"><figcaption>Deletion test on 100 test X-rays.</figcaption></figure>
+          </div>
+        </section>
+      </section>
+
+      <!-- ===== About ===== -->
+      <section class="view prose-view" data-view="about" hidden>
+        <section class="panel prose">
+          <h3>What KneeGrade does</h3>
+          <p>KneeGrade estimates the severity of knee osteoarthritis on the Kellgren–Lawrence (KL) scale from a front-view knee X-ray, and shows a heatmap of the regions that most influenced the result. It was built as a machine-learning portfolio project: both networks were designed and trained from scratch, without pretrained weights.</p>
+          <div class="callout">
+            <b>Not a medical device.</b> KneeGrade is a research and education demo. It has not been clinically validated and must not be used to diagnose or treat anyone.
+          </div>
+
+          <h3>The Kellgren–Lawrence scale</h3>
+          <div id="about-scale"></div>
+
+          <h3>Dataset</h3>
+          <p>8,260 knee X-rays from the Osteoarthritis Initiative, cropped to the joint at 224×224 pixels: 5,778 for training, 826 for validation and 1,656 for the final test. Grade 4 makes up only 3% of the training data, a 13-to-1 imbalance against grade 0, which is why the model is judged on balanced accuracy.</p>
+          <p class="fine">Chen, Pingjun (2018). <i>Knee Osteoarthritis Severity Grading Dataset</i>. Mendeley Data, V1. DOI <a href="https://doi.org/10.17632/56rmx5bjcr.1" target="_blank" rel="noopener">10.17632/56rmx5bjcr.1</a>. Licensed under <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a>. Organized from the Osteoarthritis Initiative. Images were preprocessed and augmented for training. Neither the dataset authors nor the OAI endorse this project.</p>
+
+          <h3>How an X-ray is graded</h3>
+          <ol class="steps">
+            <li><b>Standardize the image.</b> It is converted to 224×224 grayscale. Inverted X-rays (110 in the dataset) are detected and flipped back.</li>
+            <li><b>Normalize contrast.</b> Brightness is stretched using the central joint region, then CLAHE sharpens local bone edges. This removes scanner exposure differences.</li>
+            <li><b>Run two networks.</b> Both predict a probability for each grade, and the two predictions are averaged. They run on your own device with TensorFlow.js, producing the same results as the original Python pipeline.</li>
+            <li><b>Correct for rarity.</b> Each probability is divided by how common that grade was in training. This stops the model from defaulting to common grades, and it is why the predicted grade is occasionally not the tallest bar.</li>
+            <li><b>Explain.</b> Grad-CAM highlights the regions that most influenced the predicted grade.</li>
+          </ol>
+
+          <h3>Model architecture</h3>
+          <table class="table compact">
+            <thead><tr><th>Stage</th><th>Layers</th><th class="num">Output</th></tr></thead>
+            <tbody>
+              <tr><td>Input</td><td>Grayscale X-ray</td><td class="num">224 × 224 × 1</td></tr>
+              <tr><td>Block 1</td><td>2 × (3×3 convolution, batch norm, ReLU), max pooling</td><td class="num">112 × 112 × 32</td></tr>
+              <tr><td>Block 2</td><td>Same pattern</td><td class="num">56 × 56 × 64</td></tr>
+              <tr><td>Block 3</td><td>Same pattern</td><td class="num">28 × 28 × 128</td></tr>
+              <tr><td>Block 4</td><td>Same pattern</td><td class="num">14 × 14 × 256</td></tr>
+              <tr><td>Head</td><td>Global average pooling, dropout 0.3, softmax</td><td class="num">5 grades</td></tr>
+            </tbody>
+          </table>
+          <p>The first network has 1,175,845 parameters. The second uses the same design 1.5 times wider (48 to 384 filters). Both were trained with the Adam optimizer, augmentation (flips, small rotations, shifts, zoom, brightness and contrast changes), and checkpoints chosen by validation balanced accuracy.</p>
+
+          <h3>Limitations</h3>
+          <ul>
+            <li>Trained and tested on a single source, the Osteoarthritis Initiative. Performance on other hospitals, scanners or populations is unknown.</li>
+            <li>Grade 1 ("doubtful") is not reliably separated from grades 0 and 2. On the test set, 46% of healthy knees were graded 1.</li>
+            <li>The public data has no patient identifiers, so one patient's two knees may sit in different splits, which could make results slightly optimistic.</li>
+            <li>The model grades any image it receives. Results for anything other than a front-view knee X-ray cropped to the joint are meaningless.</li>
+            <li>Heatmaps were tested for faithfulness but not checked against expert lesion annotations.</li>
+          </ul>
+
+          <h3>Your data</h3>
+          <p>KneeGrade has no server. The models download to your browser once, and every X-ray is analyzed on your own device: images are never uploaded anywhere. Your history is saved only in this browser, so it survives refreshes but isn't shared across devices. Clearing your browser's site data, or using Clear history, removes it.</p>
+
+          <h3>Links</h3>
+          <p><a id="link-model" href="#" target="_blank" rel="noopener">Model card on Hugging Face</a><br>
+             <a id="link-code" href="https://github.com/YOUR_USERNAME/knee-oa-classification" target="_blank" rel="noopener">Source code and full write-up on GitHub</a></p>
+        </section>
+      </section>
+    </main>
+
+    <footer class="page-foot">KneeGrade is a research and education demo. It is not a medical device and does not provide a diagnosis.</footer>
+  </div>
+</div>
+
+<!-- ============ Detail modal ============ -->
+<div class="modal" id="modal" hidden>
+  <div class="modal-backdrop" data-close></div>
+  <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div class="modal-head">
+      <h2 id="modal-title">Analysis</h2>
+      <div class="modal-actions">
+        <button class="btn danger" id="modal-delete" type="button">Delete</button>
+        <button class="icon-btn" id="modal-close" type="button" aria-label="Close">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+        </button>
+      </div>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+  </div>
+</div>
+
+<input type="file" id="file-input" accept="image/png,image/jpeg" hidden>
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+</body>
+</html>

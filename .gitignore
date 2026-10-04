@@ -6,3 +6,5 @@ __pycache__/
 *.h5
 predictions/
 hf_model/
+web/models/
+web/parity/
