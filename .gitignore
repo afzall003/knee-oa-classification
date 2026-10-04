@@ -5,3 +5,4 @@ __pycache__/
 *.keras
 *.h5
 predictions/
+hf_model/
